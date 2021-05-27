@@ -1,16 +1,14 @@
-# import json
 import pingparsing
 import time
 from datetime import datetime
 import pystray
+from pystray import Menu, MenuItem
 from PIL import Image, ImageDraw, ImageFont
-import signal
-import sys
 
-def signal_handler(sig, frame,icon):
-    sys.exit(0)
+
+def exit_action(icon):
+    icon.visible = False
     icon.stop()
-
 
 
 def ping():
@@ -39,16 +37,6 @@ def ping():
         }
     return res
 
-icon = pystray.Icon('Network downtime detector')
-
-#width = 20
-#height = 20
-good = "GREEN"
-average = "YELLOW"
-bad = "BLUE"
-down = "RED"
-white = "WHITE"
-black = "BLACK"
 
 def create_image(color,average_time, fsize,fcolor):
     # Generate an image and draw a pattern
@@ -59,45 +47,69 @@ def create_image(color,average_time, fsize,fcolor):
     dc.text((2,2),str(average_time), fill=fcolor, size=fsize)
     return image
 
-icon.icon = create_image(down,"Start",12,white)
-
-global ping_lost
-ping_lost = 0
 
 def setup(icon):
     icon.visible = True
-    global ping_lost
-    time.sleep(1)
     
-    while True:
+    ping_lost = 0
+    total_ping_lost = 0
+    
+    
+    while icon.visible:
+        time.sleep(1)
         r = ping()
         received = r["received"]
         average_time = r["average_time"]
 
         if average_time == None:
             average_time = 3500
+
         if received and average_time < 25:
             print("Everything working fine", average_time, end='\r')
             icon.icon = create_image(good,int(average_time),10,white)
-        
+            ping_lost=0
+
         elif received and average_time > 25 and average_time < 100:
             print("Working but not optimal", average_time, end='\r')
             icon.icon = create_image(average,int(average_time),10,black)
+            ping_lost=0
+
         elif received and average_time > 100 and average_time < 3000:
             print("Working but slow", average_time, end='\r')
             icon.icon = create_image(bad,int(average_time),4,white)
+            ping_lost=0
+
         else:# not received:
-            f = open(filename,"a")
-            print("Not working at: ", time.ctime(), "Down for: ", str(ping_lost), " seconds.")
+            ping_lost+=1
+            total_ping_lost+=1
+            with open(filename, "a") as f:
+                f.write(time.ctime() + " for: " + str(ping_lost) + ". Total ping lost: " + str(total_ping_lost)+ "\n")
+            print("Not working at: ", time.ctime(), "Down for: ", str(ping_lost), " seconds. Total ping lost: " + str(total_ping_lost))
             icon.icon = create_image(down,"Down",10,white)
-            f.write(time.ctime() + "\n")
-            f.close()
-            ping_lost+=2
             #ping_lost = pinglost + ping_lost
         time.sleep(1)
         pass
-    print("cerrando aca")
-    f.close()
+    
+
+def init_icon():
+    icon = pystray.Icon('Network downtime detector')
+
+    icon.menu = Menu(MenuItem('Exit', lambda : exit_action(icon)))
+
+    icon.icon = create_image(down,"Start",12,white)
+
+    icon.title = 'Network downtime detector'
+
+    icon.run(setup)
+
+good = "GREEN"
+average = "YELLOW"
+bad = "BLUE"
+down = "RED"
+white = "WHITE"
+black = "BLACK"
+
 
 filename = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
-icon.run(setup)
+
+init_icon()
