@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Long time ago...
+Created long time ago...
 @author: muadiv
 """
 
