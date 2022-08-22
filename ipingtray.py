@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Long time ago...
+@author: muadiv
+"""
+
 import pingparsing
 import time
 from datetime import datetime
